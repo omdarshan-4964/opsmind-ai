@@ -2,9 +2,23 @@ import express from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 5000;
+
+// Load environment variables (try server/.env first, then ai-engine/.env)
+dotenv.config();
+const aeEnv = path.resolve(__dirname, '..', '..', 'ai-engine', '.env');
+dotenv.config({ path: aeEnv });
+
+// parse JSON bodies for routes like /chat
+app.use(express.json());
+
+// register routers
+import chatRouter from './routes/chat';
+app.use('/', chatRouter);
 
 // ensure uploads directory exists (at runtime this will resolve relative to compiled output)
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -56,6 +70,38 @@ app.post('/upload', upload.any(), (req, res) => {
 });
 
 
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
+// Start server after establishing MongoDB connection (askAI expects a live connection)
+// Increase serverSelectionTimeoutMS to allow slower networks to connect.
+const start = async () => {
+    const mongoUri = process.env.MONGODB_URI || '';
+    if (!mongoUri) {
+        console.warn('MONGODB_URI not set. askAI will fail to query vectors without a DB connection.');
+    } else {
+        try {
+            console.log('Connecting to MongoDB...');
+            await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 20000 });
+            console.log('✅ Connected to MongoDB');
+        } catch (err) {
+            console.error('❌ MongoDB connection error:', err);
+            // continue starting server so endpoints can return helpful error messages
+        }
+    }
+
+    // health endpoint
+    app.get('/health', (req, res) => {
+        const states: Record<number, string> = {
+            0: 'disconnected',
+            1: 'connected',
+            2: 'connecting',
+            3: 'disconnecting'
+        };
+        const state = mongoose.connection.readyState;
+        res.json({ status: 'ok', db: states[state] || 'unknown' });
+    });
+
+    app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
+};
+
+start();
