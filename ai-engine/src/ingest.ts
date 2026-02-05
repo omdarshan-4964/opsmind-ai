@@ -1,40 +1,56 @@
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+// ai-engine/src/ingest.ts
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import mongoose from "mongoose";
+import * as path from "path";
+import * as dotenv from "dotenv";
 import { DocumentChunkModel } from "./models/DocumentChunk";
-import path from 'path';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/opsmind";
 const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || "";
+
+// Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
 
-const ingestDocument = async (filePath: string) => {
+/**
+ * Ingests a PDF file into the vector database
+ * @param filePath - Path to the PDF file
+ */
+export async function ingestPDF(filePath: string): Promise<void> {
     try {
-        console.log(`🔌 Connecting to DB...`);
-        await mongoose.connect(MONGO_URI);
+        console.log(`📄 Loading PDF: ${filePath}`);
+        
+        // Connect to MongoDB
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(MONGODB_URI);
+            console.log("✅ Connected to MongoDB");
+        }
 
-        console.log(`📂 Loading PDF: ${filePath}`);
+        // Load PDF
         const loader = new PDFLoader(filePath);
-        const rawDocs = await loader.load();
+        const docs = await loader.load();
+        console.log(`📚 Loaded ${docs.length} pages from PDF`);
 
-        console.log(`✂️ Splitting text...`);
-        const splitter = new RecursiveCharacterTextSplitter({
+        // Split documents into chunks
+        const textSplitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
             chunkOverlap: 200,
         });
-        const splitDocs = await splitter.splitDocuments(rawDocs);
-        console.log(`🧩 Created ${splitDocs.length} chunks.`);
+        const splitDocs = await textSplitter.splitDocuments(docs);
+        console.log(`✂️ Split into ${splitDocs.length} chunks`);
 
-        console.log(`🧠 Generating Embeddings (Model: gemini-embedding-001)...`);
-        const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
-
+        // Process and save chunks
         const chunksToSave = [];
-
+        
         for (const doc of splitDocs) {
+            // 🛑 SAFETY DELAY: Wait 4 seconds to respect Gemini Free Tier (15 req/min)
+            console.log("⏳ Waiting 4s to avoid rate limit...");
+            await new Promise(resolve => setTimeout(resolve, 4000));
+
             // Use Raw SDK to generate embedding
             const result = await model.embedContent(doc.pageContent);
             const embedding = result.embedding.values;
@@ -47,23 +63,35 @@ const ingestDocument = async (filePath: string) => {
                 },
                 vectorEmbedding: embedding,
             });
-            process.stdout.write("✅ ");
+            process.stdout.write("✅ Saved Chunk! \n");
         }
 
+        // Bulk insert all chunks
         await DocumentChunkModel.insertMany(chunksToSave);
-        console.log(`\n🎉 Success! Saved ${chunksToSave.length} vectors.`);
+        console.log(`\n🎉 Successfully ingested ${chunksToSave.length} chunks from ${path.basename(filePath)}`);
 
     } catch (error) {
-        console.error("❌ Ingestion Failed:", error);
-    } finally {
-        await mongoose.disconnect();
+        console.error("❌ Error during ingestion:", error);
+        throw error;
     }
-};
+}
 
-// --- Execution ---
-const targetFile = process.argv[2];
-if (targetFile) {
-    ingestDocument(targetFile);
-} else {
-    console.error("Usage: npx ts-node src/ingest.ts <path-to-pdf>");
+// CLI usage
+if (require.main === module) {
+    const filePath = process.argv[2];
+    
+    if (!filePath) {
+        console.error("❌ Usage: ts-node ingest.ts <path-to-pdf>");
+        process.exit(1);
+    }
+
+    ingestPDF(filePath)
+        .then(() => {
+            console.log("✅ Ingestion complete");
+            process.exit(0);
+        })
+        .catch((error) => {
+            console.error("❌ Ingestion failed:", error);
+            process.exit(1);
+        });
 }

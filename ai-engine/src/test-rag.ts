@@ -21,7 +21,7 @@ const runTest = async () => {
             });
 
         // CHANGE THIS QUESTION to something inside your PDF
-        const question = "What is the policy for sick leave?";
+        const question = "How many days of sick leave am I allowed?";
         console.log(`\n❓ Asking: "${question}"...`);
 
         const answer = await askAI(question);
