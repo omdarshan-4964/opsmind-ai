@@ -43,12 +43,22 @@ export function useChatSSE() {
     ])
 
     try {
+      // Convert messages to ChatMessage format for AI Engine history
+      const conversationHistory = messages.map((msg) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: new Date().toISOString(),
+      }));
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ 
+          message: text,
+          history: conversationHistory 
+        }),
       })
 
       if (!response.ok) throw new Error('Failed to send message')

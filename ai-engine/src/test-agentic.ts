@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import mongoose from 'mongoose';
 import { askAgenticAI } from './query';
 import { ChatMessage } from './types';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const testAgenticAI = async () => {
     try {

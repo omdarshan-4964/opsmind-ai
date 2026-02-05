@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +13,9 @@ const port = process.env.PORT ? Number(process.env.PORT) : 5000;
 dotenv.config();
 const aeEnv = path.resolve(__dirname, '..', '..', 'ai-engine', '.env');
 dotenv.config({ path: aeEnv });
+
+// CORS: Allow all origins for demo (Week 3)
+app.use(cors({ origin: '*' }));
 
 // parse JSON bodies for routes like /chat
 app.use(express.json());
