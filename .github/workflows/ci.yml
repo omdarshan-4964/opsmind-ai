@@ -33,6 +33,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
 
+      - name: Install AI Engine Dependencies (required for server imports)
+        working-directory: ./ai-engine
+        run: npm install
+
       - name: Install Server Dependencies
         working-directory: ./server
         run: npm install
