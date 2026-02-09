@@ -21,8 +21,8 @@ services:
   # Server Service (Express + AI Engine)
   server:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./server/Dockerfile
     container_name: opsmind-server
     restart: unless-stopped
     ports:

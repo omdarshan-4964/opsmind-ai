@@ -8,17 +8,24 @@ WORKDIR /app
 # Install wget for healthcheck
 RUN apk add --no-cache wget
 
-# Copy package files for both server and ai-engine
-COPY package*.json ./
+# Copy ai-engine package files and install dependencies
+COPY ai-engine/package*.json ./ai-engine/
+RUN cd ai-engine && npm install
 
-# Install server dependencies
-RUN npm install
+# Copy server package files and install dependencies
+COPY server/package*.json ./server/
+RUN cd server && npm install
 
-# Copy TypeScript configuration
-COPY tsconfig.json ./
+# Copy ai-engine source and TypeScript config
+COPY ai-engine/tsconfig.json ./ai-engine/
+COPY ai-engine/src ./ai-engine/src
 
-# Copy source code
-COPY src ./src
+# Copy server TypeScript configuration and source code
+COPY server/tsconfig.json ./server/
+COPY server/src ./server/src
+
+# Set working directory to server for build and runtime
+WORKDIR /app/server
 
 # Expose server port
 EXPOSE 5000
