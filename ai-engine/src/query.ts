@@ -66,21 +66,27 @@ export const askAgenticAI = async ({
                     _id: 0,
                     content: 1,
                     score: { $meta: "vectorSearchScore" },
+                    metadata: 1, // ⭐ Include metadata (sourceFile, pageNumber)
                 },
             },
         ];
 
         const results = await DocumentChunkModel.aggregate(pipeline);
 
-        // Store sources for response
-        const sources = results.map((doc: any) => ({
+        // ⭐ Hallucination Guardrail: Filter by relevance threshold
+        const RELEVANCE_THRESHOLD = 0.35; // Minimum score for reliable answers
+        const relevantResults = results.filter((doc: any) => doc.score >= RELEVANCE_THRESHOLD);
+
+        // Store sources for response with metadata for citations
+        const sources = relevantResults.map((doc: any) => ({
             content: doc.content,
             score: doc.score,
+            metadata: doc.metadata, // ⭐ Include metadata for citations
         }));
 
-        if (!results || results.length === 0) {
+        if (!relevantResults || relevantResults.length === 0) {
             return {
-                answer: "I couldn't find any relevant information in the uploaded documents.",
+                answer: "I don't have enough relevant context to answer this question accurately. Please ensure you've uploaded the relevant documents or rephrase your question.",
                 sources: [],
                 toolsCalled: [],
                 conversationContext: {
@@ -116,7 +122,7 @@ export const askAgenticAI = async ({
         }
 
         // 4. Construct Context with history and tool results
-        const context = results.map((doc: any) => doc.content).join("\n\n---\n\n");
+        const context = relevantResults.map((doc: any) => doc.content).join("\n\n---\n\n");
         
         // Build conversation history for context
         let conversationHistory = '';
