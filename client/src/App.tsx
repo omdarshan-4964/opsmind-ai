@@ -6,7 +6,7 @@ import SearchBar from './Components/SearchBar'
 import ThemeSwitcher from './Components/ThemeSwitcher'
 import HistorySidebar from './Components/HistorySidebar'
 
-import { useChatSSE } from './Hooks/useChatSSE'
+import { useChatSSE } from './Hooks/UseChatSSE'
 
 import './App.css'
 
