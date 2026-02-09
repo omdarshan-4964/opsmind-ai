@@ -1,15 +1,28 @@
 import express from 'express';
 // NOTE: relative path assumes this file is at server/src/routes/chat.ts
 // and ai-engine is at ../../ai-engine/src -> adjust if your layout differs
-import { askAI } from '../../../ai-engine/src';
+import { askAgenticAI } from '../../../ai-engine/src/query';
+import { ChatMessage } from '../../../ai-engine/src/types';
 
 const router = express.Router();
 
 router.post('/chat', async (req, res) => {
     try {
-        const { question } = req.body;
-        const answer = await askAI(question);
-        res.json({ answer });
+        const { message, history } = req.body;
+        const question = message || req.body.question; // Support both 'message' and 'question'
+        
+        if (!question) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+        
+        // Pass history to AI engine for context-aware responses
+        const response = await askAgenticAI({ 
+            question, 
+            history: history || [] 
+        });
+        
+        // Return answer matching what Client expects
+        res.json({ answer: response.answer, sources: response.sources });
     } catch (error) {
         console.error('AI Error', error);
         // Handle rate-limit / quota errors from Google SDK
