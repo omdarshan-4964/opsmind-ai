@@ -125,7 +125,7 @@ export const askAgenticAI = async ({
                     hasHistory: history.length > 0,
                 },
                 metadata: {
-                    model: "gemini-pro",
+                    model: "gemini-3-pro-preview",
                     embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: false,
@@ -176,7 +176,7 @@ export const askAgenticAI = async ({
 
         // 5. Generate Answer (With Safety Fallback)
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const prompt = `You are a helpful AI assistant with access to company documents and tools.
 
 CONTEXT FROM DOCUMENTS:
@@ -204,7 +204,7 @@ Instructions:
                     hasHistory: history.length > 0,
                 },
                 metadata: {
-                    model: "gemini-pro",
+                    model: "gemini-3-pro-preview",
                     embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: false,
@@ -212,13 +212,29 @@ Instructions:
             };
 
         } catch (apiError: any) {
-            // 🛑 FALLBACK MODE: If API is Quota Limited, return raw text from DB
-            console.warn("⚠️ AI Quota exceeded (429). Switching to Retrieval-Only mode.");
-            console.warn("Returning raw context to Frontend.");
+            // Log the actual error for debugging
+            console.error("❌ API Error Details:", apiError.message || apiError);
+            console.error("❌ Error Status:", apiError.status || apiError.code);
+            
+            // Check if it's actually a quota error (429) or other error
+            const isQuotaError = apiError.status === 429 || 
+                                 apiError.message?.includes('429') || 
+                                 apiError.message?.includes('quota') ||
+                                 apiError.message?.includes('RESOURCE_EXHAUSTED');
+            
+            if (isQuotaError) {
+                console.warn("⚠️ AI Quota exceeded (429). Switching to Retrieval-Only mode.");
+            } else {
+                console.error("⚠️ Gemini API error (not quota). Details:", apiError);
+            }
+            
+            const errorPrefix = isQuotaError 
+                ? "(⚠️ Note: AI Daily Quota Reached - Showing Raw Database Result)"
+                : "(⚠️ Note: AI Error - Showing Raw Database Result)";
             
             const fallbackAnswer = toolsCalled.length > 0
-                ? `(⚠️ Note: AI Daily Quota Reached - Showing Raw Database Result)\n\nHere is the relevant policy I found:\n\n${context}\n\nTool Data:\n${JSON.stringify(toolsCalled[0].result, null, 2)}`
-                : `(⚠️ Note: AI Daily Quota Reached - Showing Raw Database Result)\n\nHere is the relevant policy I found:\n\n${context}`;
+                ? `${errorPrefix}\n\nHere is the relevant policy I found:\n\n${context}\n\nTool Data:\n${JSON.stringify(toolsCalled[0].result, null, 2)}`
+                : `${errorPrefix}\n\nHere is the relevant policy I found:\n\n${context}`;
             
             return {
                 answer: fallbackAnswer,
@@ -229,7 +245,7 @@ Instructions:
                     hasHistory: history.length > 0,
                 },
                 metadata: {
-                    model: "gemini-pro",
+                    model: "gemini-3-pro-preview",
                     embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: true,
