@@ -23,7 +23,7 @@ const testVectorSearch = async () => {
         console.log(`❓ Question: "${question}"`);
 
         // Generate embedding
-        const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
         const result = await embeddingModel.embedContent(question);
         const queryEmbedding = result.embedding.values;
         console.log(`📏 Query Embedding Length: ${queryEmbedding.length}`);

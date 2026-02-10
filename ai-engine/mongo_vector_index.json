@@ -1,7 +1,7 @@
 {
     "fields": [
         {
-            "numDimensions": 768,
+            "numDimensions": 3072,
             "path": "vectorEmbedding",
             "similarity": "cosine",
             "type": "vector"

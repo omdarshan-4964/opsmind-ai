@@ -50,7 +50,8 @@ export function useChatSSE() {
         timestamp: new Date().toISOString(),
       }));
 
-      const response = await fetch('/api/chat', {
+      // Direct fetch to server (proxy not needed for SSE)
+      const response = await fetch('http://localhost:5000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export function useChatSSE() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [messages]) // Added messages dependency for history
 
   return { messages, sendMessage, loading }
 }

@@ -29,3 +29,10 @@ yarn-error.log*
 
 # Brain/Artifacts (if inside repo)
 .gemini/
+
+# Internal Documentation (not for submission)
+CRITICAL_FIXES.md
+TEST_SETUP.md
+GAP_ANALYSIS_REPORT.md
+DEPLOYMENT.md
+QUICK_REFERENCE.md
