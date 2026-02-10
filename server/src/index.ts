@@ -14,14 +14,17 @@ dotenv.config();
 const aeEnv = path.resolve(__dirname, '..', '..', 'ai-engine', '.env');
 dotenv.config({ path: aeEnv });
 
-// CORS: Allow all origins for demo (Week 3)
-app.use(cors({ origin: '*' }));
+// CORS: Allow all origins (dev) or specific Vercel app (prod)
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*'
+}));
 
 // parse JSON bodies for routes like /chat
 app.use(express.json());
 
 // Register chat router
 import chatRouter from './routes/chat';
+import { ingestionQueue } from './queue/ingestionQueue';
 app.use('/', chatRouter);
 
 // ensure uploads directory exists (at runtime this will resolve relative to compiled output)
@@ -54,7 +57,7 @@ app.get('/', (req, res) => {
 });
 
 // POST /upload -- accept any single file field (permissive)
-app.post('/upload', upload.any(), (req, res) => {
+app.post('/upload', upload.any(), async (req, res) => {
     // multer attaches files to req.files when using any(); pick the first file
     const files = (req as any).files as any[] | undefined;
     const file = files?.[0];
@@ -64,11 +67,14 @@ app.post('/upload', upload.any(), (req, res) => {
     const isPdf = file.mimetype === 'application/pdf' || path.extname(file.originalname).toLowerCase() === '.pdf';
     if (!isPdf) return res.status(400).json({ error: 'Only PDF files are allowed' });
 
+    // Trigger background ingestion
+    await ingestionQueue.add('ingest-job', { filePath: file.path });
+
     res.status(201).json({
+        status: 'queued',
+        message: 'PDF processing started in background',
         originalName: file.originalname,
         fileName: file.filename,
-        size: file.size,
-        mimeType: file.mimetype,
         path: file.path
     });
 });

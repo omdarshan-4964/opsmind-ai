@@ -1,14 +1,8 @@
 /* ============================= */
-/* Imports MUST be first         */
+/* Tailwind v4 setup             */
 /* ============================= */
+@import "tailwindcss";
 @import "tw-animate-css";
-
-/* ============================= */
-/* Tailwind setup (REQUIRED)     */
-/* ============================= */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* ============================= */
 /* Theme variables               */

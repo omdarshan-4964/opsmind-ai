@@ -3,6 +3,12 @@
 import { useState, useCallback } from 'react'
 import type { Message, Source } from '../Types/Chat'
 
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string>
+  }
+}
+
 
 interface StreamChunk {
   type: 'content' | 'sources' | 'done'
@@ -51,7 +57,8 @@ export function useChatSSE() {
       }));
 
       // Direct fetch to server (proxy not needed for SSE)
-      const response = await fetch('http://localhost:5000/chat', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

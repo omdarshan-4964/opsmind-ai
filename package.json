@@ -1,0 +1,16 @@
+{
+  "name": "opsmind-ai-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install --prefix ai-engine && npm install --prefix server && npm install --prefix client --legacy-peer-deps",
+    "build": "npm install --prefix ai-engine && npm run build --prefix ai-engine && npm install --prefix server && npm run build --prefix server && npm install --prefix client --legacy-peer-deps && npm run build --prefix client",
+    "build-backend": "npm install --prefix ai-engine && npm run build --prefix ai-engine && npm install --prefix server && npm run build --prefix server",
+    "build:engine": "npm install --prefix ai-engine && npm run build --prefix ai-engine",
+    "build:server": "npm install --prefix server && npm run build --prefix server",
+    "build:client": "npm install --prefix client && npm run build --prefix client"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
