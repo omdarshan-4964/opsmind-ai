@@ -14,7 +14,7 @@ const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || "";
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+const model = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
 
 /**
  * Ingests a PDF file into the vector database

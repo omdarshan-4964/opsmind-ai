@@ -1,6 +1,7 @@
 // ai-engine/src/query.ts
 import * as dotenv from 'dotenv';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import mongoose from "mongoose";
 import { DocumentChunkModel } from "./models/DocumentChunk";
 import { ChatMessage, AgentResponse, ToolCall } from "./types";
 import { checkLeaveBalance, TOOL_DEFINITIONS } from "./tools";
@@ -8,7 +9,34 @@ import { checkLeaveBalance, TOOL_DEFINITIONS } from "./tools";
 dotenv.config();
 
 const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || "";
+const MONGODB_URI = process.env.MONGODB_URI || "";
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+/**
+ * Ensure MongoDB connection is ready before queries
+ */
+async function ensureMongoConnection(): Promise<void> {
+    if (mongoose.connection.readyState === 1) {
+        // Already connected
+        return;
+    }
+    
+    if (mongoose.connection.readyState === 2) {
+        // Connecting - wait for it
+        await new Promise((resolve) => {
+            mongoose.connection.once('connected', resolve);
+        });
+        return;
+    }
+    
+    // Not connected - connect now
+    if (MONGODB_URI) {
+        await mongoose.connect(MONGODB_URI);
+        console.log("✅ MongoDB connected from query.ts");
+    } else {
+        throw new Error("MONGODB_URI not set");
+    }
+}
 
 /**
  * Legacy function for backward compatibility
@@ -40,12 +68,15 @@ export const askAgenticAI = async ({
     const toolsCalled: ToolCall[] = [];
     
     try {
+        // Ensure MongoDB is connected before running queries
+        await ensureMongoConnection();
+        
         console.log(`🤔 Agentic AI Processing: "${question}"`);
         console.log(`📚 History Length: ${history.length} messages`);
 
-        // 1. Generate Embedding using RAW Google SDK (Model: text-embedding-004)
+        // 1. Generate Embedding using RAW Google SDK (Model: models/gemini-embedding-001)
         // ✅ CRITICAL: Must match the model used in ingest.ts
-        const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        const embeddingModel = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
         const result = await embeddingModel.embedContent(question);
         const queryEmbedding = result.embedding.values;
         console.log(`📏 Query Embedding Length: ${queryEmbedding.length}`);
@@ -95,7 +126,7 @@ export const askAgenticAI = async ({
                 },
                 metadata: {
                     model: "gemini-pro",
-                    embeddingModel: "text-embedding-004",
+                    embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: false,
                 },
@@ -174,7 +205,7 @@ Instructions:
                 },
                 metadata: {
                     model: "gemini-pro",
-                    embeddingModel: "text-embedding-004",
+                    embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: false,
                 },
@@ -199,7 +230,7 @@ Instructions:
                 },
                 metadata: {
                     model: "gemini-pro",
-                    embeddingModel: "text-embedding-004",
+                    embeddingModel: "models/gemini-embedding-001",
                     processingTime: Date.now() - startTime,
                     fallbackMode: true,
                 },

@@ -20,7 +20,7 @@ app.use(cors({ origin: '*' }));
 // parse JSON bodies for routes like /chat
 app.use(express.json());
 
-// register routers
+// Register chat router
 import chatRouter from './routes/chat';
 app.use('/', chatRouter);
 
@@ -75,19 +75,19 @@ app.post('/upload', upload.any(), (req, res) => {
 
 
 // Start server after establishing MongoDB connection (askAI expects a live connection)
-// Increase serverSelectionTimeoutMS to allow slower networks to connect.
 const start = async () => {
     const mongoUri = process.env.MONGODB_URI || '';
     if (!mongoUri) {
-        console.warn('MONGODB_URI not set. askAI will fail to query vectors without a DB connection.');
+        console.warn('⚠️  MONGODB_URI not set. AI queries may fail.');
     } else {
         try {
             console.log('Connecting to MongoDB...');
-            await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 20000 });
+            await mongoose.connect(mongoUri, { 
+                serverSelectionTimeoutMS: 20000,
+            });
             console.log('✅ Connected to MongoDB');
         } catch (err) {
             console.error('❌ MongoDB connection error:', err);
-            // continue starting server so endpoints can return helpful error messages
         }
     }
 
